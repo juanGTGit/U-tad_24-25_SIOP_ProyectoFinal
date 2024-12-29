@@ -95,24 +95,24 @@ void Printbytemaps(EXT_BYTE_MAPS *ext_bytemaps) {
     printf("\n");
 }
 
-//Añadir tamaño y bloques
 void Directorio(EXT_ENTRADA_DIR *directorio, EXT_BLQ_INODOS *inodos) {
-    for (int i = 1; i < MAX_FICHEROS; i++) {
-        if (directorio[i].dir_inodo != NULL_INODO) {
-            printf("Nombre: %s, Inodo: %d\n", directorio[i].dir_nfich, directorio[i].dir_inodo);
-        }
-    }
-}
-
-int Renombrar(EXT_ENTRADA_DIR *directorio, char *nombreantiguo, char *nombrenuevo) {
+    printf("Nombre\t\tInodo\tTamaño\tBloques\n");
     for (int i = 0; i < MAX_FICHEROS; i++) {
-        if (strcmp(directorio[i].dir_nfich, nombreantiguo) == 0) {
-            strcpy(directorio[i].dir_nfich, nombrenuevo);
-            return 0;
+        if (directorio[i].dir_inodo != NULL_INODO) {
+            unsigned short int inodo_idx = directorio[i].dir_inodo;
+            EXT_SIMPLE_INODE inodo = inodos->blq_inodos[inodo_idx];
+
+            printf("%s\t%d\t%d\t", directorio[i].dir_nfich, inodo_idx, inodo.size_fichero);
+
+            // Mostrar bloques asignados al archivo
+            for (int j = 0; j < MAX_NUMS_BLOQUE_INODO; j++) {
+                if (inodo.i_nbloque[j] != NULL_BLOQUE) {
+                    printf("%d ", inodo.i_nbloque[j]);
+                }
+            }
+            printf("\n");
         }
     }
-    printf("Error: Archivo no encontrado o nombre ya existente.\n");
-    return -1;
 }
 
 int Imprimir(EXT_ENTRADA_DIR *directorio, EXT_BLQ_INODOS *inodos, EXT_DATOS *memdatos, char *nombre) {
@@ -137,16 +137,25 @@ int Borrar(EXT_ENTRADA_DIR *directorio, EXT_BLQ_INODOS *inodos, EXT_BYTE_MAPS *e
         if (strcmp(directorio[i].dir_nfich, nombre) == 0) {
             unsigned short int inodo_idx = directorio[i].dir_inodo;
             EXT_SIMPLE_INODE *inodo = &inodos->blq_inodos[inodo_idx];
-            inodo->size_fichero = 0;
+
+            // Liberar bloques asignados
             for (int j = 0; j < MAX_NUMS_BLOQUE_INODO; j++) {
                 if (inodo->i_nbloque[j] != NULL_BLOQUE) {
                     ext_bytemaps->bmap_bloques[inodo->i_nbloque[j]] = 0;
+                    ext_superblock->s_free_blocks_count++;  // Incrementar bloques libres
                     inodo->i_nbloque[j] = NULL_BLOQUE;
                 }
             }
+
+            // Liberar inodo
             ext_bytemaps->bmap_inodos[inodo_idx] = 0;
+            ext_superblock->s_free_inodes_count++;  // Incrementar inodos libres
+
+            // Eliminar entrada del directorio
             strcpy(directorio[i].dir_nfich, "");
             directorio[i].dir_inodo = NULL_INODO;
+
+            printf("Archivo eliminado con éxito.\n");
             return 0;
         }
     }
@@ -175,7 +184,8 @@ int Copiar(EXT_ENTRADA_DIR *directorio, EXT_BLQ_INODOS *inodos, EXT_BYTE_MAPS *e
     for (int i = 0; i < MAX_INODOS; i++) {
         if (ext_bytemaps->bmap_inodos[i] == 0) {
             inodo_destino = i;
-            ext_bytemaps->bmap_inodos[i] = 1; // Marcar como ocupado
+            ext_bytemaps->bmap_inodos[i] = 1;  // Marcar como ocupado
+            ext_superblock->s_free_inodes_count--;  // Decrementar inodos libres
             break;
         }
     }
@@ -209,7 +219,8 @@ int Copiar(EXT_ENTRADA_DIR *directorio, EXT_BLQ_INODOS *inodos, EXT_BYTE_MAPS *e
             // Buscar un bloque libre
             for (int j = 0; j < MAX_BLOQUES_DATOS; j++) {
                 if (ext_bytemaps->bmap_bloques[j] == 0) {
-                    ext_bytemaps->bmap_bloques[j] = 1; // Marcar como ocupado
+                    ext_bytemaps->bmap_bloques[j] = 1;  // Marcar como ocupado
+                    ext_superblock->s_free_blocks_count--;  // Decrementar bloques libres
                     inode_destino->i_nbloque[i] = j;
 
                     // Copiar contenido del bloque origen al bloque destino
