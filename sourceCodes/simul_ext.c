@@ -68,11 +68,12 @@ int main() {
             fclose(fent);
             return 0;
         } else {
-            printf("Comando desconocido\n");
+            printf("ERROR: Comando ilegal [bytemaps, copy, dir, info, imprimir, rename, remove, salir]\n");
         }
     }
 }
 
+//Cuando se copia y genera un archivo nuevo no cambia la información del súper bloque, pero sí la del bytemap
 void LeeSuperBloque(EXT_SIMPLE_SUPERBLOCK *psup) {
     printf("Número total de inodos: %d\n", psup->s_inodes_count);
     printf("Número total de bloques: %d\n", psup->s_blocks_count);
@@ -94,6 +95,7 @@ void Printbytemaps(EXT_BYTE_MAPS *ext_bytemaps) {
     printf("\n");
 }
 
+//Añadir tamaño y bloques
 void Directorio(EXT_ENTRADA_DIR *directorio, EXT_BLQ_INODOS *inodos) {
     for (int i = 1; i < MAX_FICHEROS; i++) {
         if (directorio[i].dir_inodo != NULL_INODO) {
