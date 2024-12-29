@@ -115,6 +115,17 @@ void Directorio(EXT_ENTRADA_DIR *directorio, EXT_BLQ_INODOS *inodos) {
     }
 }
 
+int Renombrar(EXT_ENTRADA_DIR *directorio, char *nombreantiguo, char *nombrenuevo) {
+    for (int i = 0; i < MAX_FICHEROS; i++) {
+        if (strcmp(directorio[i].dir_nfich, nombreantiguo) == 0) {
+            strcpy(directorio[i].dir_nfich, nombrenuevo);
+            return 0;
+        }
+    }
+    printf("Error: Archivo no encontrado o nombre ya existente.\n");
+    return -1;
+}
+
 int Imprimir(EXT_ENTRADA_DIR *directorio, EXT_BLQ_INODOS *inodos, EXT_DATOS *memdatos, char *nombre) {
     for (int i = 0; i < MAX_FICHEROS; i++) {
         if (strcmp(directorio[i].dir_nfich, nombre) == 0) {
